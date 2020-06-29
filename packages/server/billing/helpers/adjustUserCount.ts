@@ -48,6 +48,7 @@ const changePause = (inactive: boolean) => async (_orgIds: string[], userId: str
     userId,
     event: inactive ? 'Account Paused' : 'Account Unpaused'
   })
+  const operation = inactive ? 'decrement' : 'increment'
   return Promise.all([
     db.write('User', userId, {inactive}),
     r
@@ -55,7 +56,8 @@ const changePause = (inactive: boolean) => async (_orgIds: string[], userId: str
       .getAll(userId, {index: 'userId'})
       .filter({removedAt: null})
       .update({inactive})
-      .run()
+      .run(),
+    adjustUserCountOnOrgs(operation, _orgIds, 1)
   ])
 }
 
@@ -93,6 +95,7 @@ const addUser = async (orgIds: string[], userId: string) => {
       return maybeUpdateOrganizationActiveDomain(orgId, userId)
     })
   )
+  await adjustUserCountOnOrgs('increment', orgIds, 1)
 }
 
 const deleteUser = async (orgIds: string[], userId: string) => {
@@ -105,6 +108,36 @@ const deleteUser = async (orgIds: string[], userId: string) => {
       removedAt: new Date()
     })
     .run()
+}
+// TODO: set Organization.activeUserCount here!!
+// need to do for addUser and changePause (not deleteUser) then test
+// helper fn??? maybe get dbActions from typeLookup, value will be array of fns
+// maybe incrementCount and decrementCount fn.
+// decrementCount just makes number negative and gives to increment Count
+
+const adjustUserCountOnOrgs = async (
+  operation: 'increment' | 'decrement',
+  orgIds: string[],
+  qty: number
+) => {
+  const r = await getRethink()
+  /* batch updating is probably not atomic
+  r.table('Organization')
+    .getAll(r.args(orgIds))
+    .update({activeUserCount: r.row('activeUserCount') + 1})
+    .run()
+  */
+  qty = operation === 'increment' ? qty : -qty
+
+  return Promise.all(
+    orgIds.map((orgId) =>
+      r
+        .table('Organization')
+        .get(orgId)
+        .update({activeUserCount: (r.row('activeUserCount') as number) + qty})
+        .run()
+    )
+  )
 }
 
 const typeLookup = {
