@@ -127,6 +127,10 @@ const Organization = new GraphQLObjectType<any, GQLContext>({
       type: GraphQLISO8601Type,
       description: 'The datetime the organization was last updated'
     },
+    activeUserCount: {
+      type: GraphQLNonNull(GraphQLInt),
+      description: 'The number of active users who are members of this org'
+    },
     organizationUsers: {
       args: {
         after: {

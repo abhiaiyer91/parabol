@@ -14,6 +14,7 @@ interface Input {
   updatedAt?: Date
   showConversionModal?: boolean
   payLaterClickCount?: number
+  activeUserCount?: number
 }
 
 export default class Organization {
@@ -33,6 +34,7 @@ export default class Organization {
   upcomingInvoiceEmailSentAt?: Date
   tier: TierEnum
   updatedAt: Date
+  activeUserCount: number
   constructor(input: Input) {
     const {
       id,
@@ -45,7 +47,8 @@ export default class Organization {
       showConversionModal,
       payLaterClickCount,
       picture,
-      tier
+      tier,
+      activeUserCount
     } = input
     this.id = id || shortid.generate()
     this.activeDomain = activeDomain
@@ -58,5 +61,6 @@ export default class Organization {
     this.picture = picture
     this.showConversionModal = showConversionModal === null ? undefined : showConversionModal
     this.payLaterClickCount = payLaterClickCount || 0
+    this.activeUserCount = activeUserCount || 0
   }
 }
