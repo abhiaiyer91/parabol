@@ -56,7 +56,7 @@ const changePause = (inactive: boolean) => async (_orgIds: string[], userId: str
       .getAll(userId, {index: 'userId'})
       .filter({removedAt: null})
       .update({inactive})
-      .run(),
+      .run()
     adjustUserCountOnOrgs(operation, _orgIds, 1)
   ])
 }
@@ -100,20 +100,18 @@ const addUser = async (orgIds: string[], userId: string) => {
 
 const deleteUser = async (orgIds: string[], userId: string) => {
   const r = await getRethink()
-  return r
-    .table('OrganizationUser')
-    .getAll(userId, {index: 'userId'})
-    .filter((row) => r.expr(orgIds).contains(row('orgId')))
-    .update({
-      removedAt: new Date()
-    })
-    .run()
+  return Promise.all([
+    r
+      .table('OrganizationUser')
+      .getAll(userId, {index: 'userId'})
+      .filter((row) => r.expr(orgIds).contains(row('orgId')))
+      .update({
+        removedAt: new Date()
+      })
+      .run(),
+    adjustUserCountOnOrgs('decrement', orgIds, 1)
+  ])
 }
-// TODO: set Organization.activeUserCount here!!
-// need to do for addUser and changePause (not deleteUser) then test
-// helper fn??? maybe get dbActions from typeLookup, value will be array of fns
-// maybe incrementCount and decrementCount fn.
-// decrementCount just makes number negative and gives to increment Count
 
 const adjustUserCountOnOrgs = async (
   operation: 'increment' | 'decrement',
@@ -134,7 +132,9 @@ const adjustUserCountOnOrgs = async (
       r
         .table('Organization')
         .get(orgId)
-        .update({activeUserCount: (r.row('activeUserCount') as number) + qty})
+        .update({
+          activeUserCount: (r.row('activeUserCount').add(qty) as unknown) as number
+        })
         .run()
     )
   )
